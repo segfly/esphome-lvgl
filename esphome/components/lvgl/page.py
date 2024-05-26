@@ -3,6 +3,10 @@ from esphome import codegen as cg
 from esphome.const import CONF_ID, CONF_TIME
 import esphome.config_validation as cv
 
+from esphome.const import (
+    CONF_LAMBDA,
+)
+
 from .defines import (
     CONF_PAGE,
     CONF_SKIP,
@@ -10,7 +14,8 @@ from .defines import (
     CONF_ANIMATION,
     LV_ANIM,
 )
-from .lv_validation import lv_bool, lv_milliseconds
+
+from .lv_validation import lv_bool, lv_milliseconds, lv_text
 from .types import (
     ObjUpdateAction,
     lv_page_t,
@@ -26,6 +31,7 @@ class PageType(WidgetType):
             CONF_PAGE,
             {
                 cv.Optional(CONF_SKIP, default=False): lv_bool,
+                cv.Optional(CONF_LAMBDA, default=""): lv_text,
             },
         )
 
@@ -42,7 +48,17 @@ class PageType(WidgetType):
         var = cg.new_Pvariable(id)
         page = Widget.create(id, var, page_spec, config, f"{var}->page")
         init.append(f"{page.var}->index = {index}")
-        init.append(f"{page.obj} = lv_obj_create(nullptr)")
+
+        s_lambda = pconf[CONF_LAMBDA]
+        if s_lambda:
+            init.append(
+                f"""{page.obj} = []() {{
+                {s_lambda}
+            }}();"""
+            )
+        else:
+            init.append(f"{page.obj} = lv_obj_create(nullptr)")
+
         skip = pconf[CONF_SKIP]
         init.append(f"{var}->skip = {skip}")
         # Set outer config first
